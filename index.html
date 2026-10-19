@@ -20,7 +20,7 @@
   --gold:#f2c14e;
   --win:#3ddc97;
   --lose:#ff5c6c;
-  --card-h:clamp(118px,18vh,160px);
+  --card-h:clamp(96px,17vh,160px);
   --card-w:calc(var(--card-h) * 0.7);
   --chip:64px;
   --ease:cubic-bezier(.2,.8,.2,1);
@@ -36,7 +36,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 button:disabled{cursor:not-allowed}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
-.app{display:grid;grid-template-rows:64px 1fr 128px;height:100vh;min-height:600px}
+.app{display:grid;grid-template-rows:56px 1fr 104px;height:100vh;min-height:540px}
 
 /* ---------- 頂部列 ---------- */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 32px}
@@ -54,7 +54,7 @@ button:disabled{cursor:not-allowed}
 
 /* ---------- 牌桌 ---------- */
 .table{
-  position:relative;display:grid;grid-template-columns:230px 1fr 230px;padding:22px 32px;
+  position:relative;display:grid;grid-template-columns:230px 1fr 230px;padding:clamp(8px,2vh,22px) 32px;
   background:var(--bg);
   min-height:0;
 }
@@ -62,7 +62,7 @@ button:disabled{cursor:not-allowed}
 .side.left{justify-content:flex-end;padding-bottom:6px}
 .side.right{justify-content:flex-start;padding-top:6px}
 .center{display:flex;flex-direction:column;justify-content:space-between;align-items:center;min-height:0}
-.zone{display:flex;flex-direction:column;align-items:center;gap:12px}
+.zone{display:flex;flex-direction:column;align-items:center;gap:10px}
 .zone-label{display:flex;align-items:center;gap:10px;height:28px;font-size:11px;letter-spacing:.22em;color:var(--muted)}
 .score{
   min-width:44px;height:28px;padding:0 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);
@@ -75,7 +75,7 @@ button:disabled{cursor:not-allowed}
 .hand{display:flex;justify-content:center;height:var(--card-h);min-width:var(--card-w)}
 .hand .card + .card{margin-left:calc(var(--card-w) * -0.42)}
 
-.message{height:64px;display:grid;place-items:center;text-align:center}
+.message{height:56px;display:grid;place-items:center;text-align:center}
 .message .main{font-size:26px;font-weight:700;letter-spacing:.02em}
 .message .sub{font-size:13px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
 .message.muted .main{font-size:17px;font-weight:500;color:var(--muted)}
@@ -133,7 +133,7 @@ button:disabled{cursor:not-allowed}
 @keyframes shufA{50%{transform:translate(-30px,-4px) rotate(-8deg)}}
 @keyframes shufB{50%{transform:translate(30px,-4px) rotate(8deg)}}
 .shoe-meta{margin-top:16px;font-size:12px;color:var(--muted);letter-spacing:.06em;font-variant-numeric:tabular-nums}
-.rules{margin-top:22px;padding:12px 18px;border:1.5px solid var(--line);border-radius:22px;font-size:12px;color:var(--muted);line-height:2;text-align:center}
+.rules{margin-top:clamp(10px,2vh,22px);padding:12px 18px;border:1.5px solid var(--line);border-radius:22px;font-size:12px;color:var(--muted);line-height:2;text-align:center}
 
 /* ---------- 籌碼與下注區 ---------- */
 .chip{
@@ -194,17 +194,29 @@ kbd{
 }
 .hint.show{opacity:1;transform:none}
 .btn.suggest{box-shadow:0 0 0 4px rgba(255,255,255,.14)}
-#panelPlay .btn{position:relative}
-.btn[data-odds]::before{
-  content:attr(data-odds);position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);
-  font-size:12px;font-weight:500;letter-spacing:.04em;color:var(--muted);white-space:nowrap;pointer-events:none;
-  animation:fadeIn .3s ease;
+#panelPlay .btn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;height:60px;min-width:150px}
+#panelPlay .btn .lbl{display:inline-flex;align-items:center;line-height:1}
+#panelPlay .btn .lbl kbd{vertical-align:0}
+#panelPlay .btn[data-odds]::after{
+  content:attr(data-odds);margin-top:6px;font-size:11px;font-weight:500;letter-spacing:.04em;line-height:1;
+  color:var(--muted);white-space:nowrap;animation:fadeIn .3s ease;
 }
-.btn.suggest[data-odds]::before{color:var(--text);font-weight:600}
+#panelPlay .btn.primary[data-odds]::after{color:rgba(20,20,22,.6)}
+#panelPlay .btn.suggest:not(.primary)[data-odds]::after{color:var(--text);font-weight:600}
 .btn.suggest:not(.primary){border-color:#9a9aa4}
 .icon-btn.on{color:var(--text);border-color:#5a5a63;background:var(--surface-2)}
 .rules + .rules{margin-top:12px}
 .keys-title{color:var(--text);font-size:11px;letter-spacing:.2em;margin-bottom:2px}
+
+/* ---------- 矮螢幕：壓縮右側說明面板 ---------- */
+@media (max-height:660px){
+  .rules{line-height:1.75;padding:8px 14px}
+  .shoe-meta{margin-top:10px}
+  .bet-spot{width:150px;height:150px;border-radius:36px}
+}
+@media (max-height:580px){
+  .rules:not(.keys){display:none}
+}
 
 /* ---------- 飛行動畫元素 ---------- */
 .flyer{position:fixed;z-index:40;pointer-events:none}
@@ -295,8 +307,8 @@ kbd{
       <button class="btn primary" id="btnDeal">發牌 <kbd>Space</kbd></button>
     </div>
     <div class="panel" id="panelPlay">
-      <button class="btn" id="btnHit">要牌 <kbd>H</kbd></button>
-      <button class="btn primary" id="btnStand">停牌 <kbd>S</kbd></button>
+      <button class="btn" id="btnHit"><span class="lbl">要牌 <kbd>H</kbd></span></button>
+      <button class="btn primary" id="btnStand"><span class="lbl">停牌 <kbd>S</kbd></span></button>
       <button class="btn" id="btnDouble">加倍</button>
     </div>
     <div class="panel" id="panelNext">
@@ -675,7 +687,7 @@ kbd{
     els.btnHit.disabled = !playing;
     els.btnStand.disabled = !playing;
     els.btnDouble.disabled = !playing || state.player.length !== 2 || state.bankroll < state.bet;
-    els.btnDouble.innerHTML = (state.bet ? `加倍 <small>+${fmt(state.bet)}</small>` : '加倍') + '<kbd>D</kbd>';
+    els.btnDouble.innerHTML = '<span class="lbl">' + (state.bet ? `加倍 <small>+${fmt(state.bet)}</small>` : '加倍') + '<kbd>D</kbd></span>';
     els.btnNext.disabled = state.busy;
     const lastSum = state.lastChips.reduce((a, b) => a + b, 0);
     els.btnRebet.disabled = state.busy || !lastSum || state.bankroll < lastSum;
