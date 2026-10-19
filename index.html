@@ -1,0 +1,1005 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noir 21｜極簡二十一點</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000000;
+  --surface:#0e0e10;
+  --surface-2:#17171a;
+  --line:#2a2a2f;
+  --line-2:#3a3a44;
+  --text:#f4f4f5;
+  --muted:#8b8b96;
+  --accent:#f5f5f5;
+  --gold:#f2c14e;
+  --win:#3ddc97;
+  --lose:#ff5c6c;
+  --card-h:clamp(118px,18vh,160px);
+  --card-w:calc(var(--card-h) * 0.7);
+  --chip:64px;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:"Inter",system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  min-width:1024px;-webkit-font-smoothing:antialiased;user-select:none;overflow:auto;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+.app{display:grid;grid-template-rows:64px 1fr 128px;height:100vh;min-height:600px}
+
+/* ---------- 頂部列 ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 32px}
+.brand{font-weight:800;letter-spacing:.22em;font-size:15px}
+.brand span{color:var(--muted)}
+.top-right{display:flex;align-items:center;gap:10px}
+.balance{display:flex;align-items:baseline;gap:12px;padding:8px 18px;border:1px solid var(--line);border-radius:999px;background:transparent;border-width:1.5px;transition:border-color .3s,box-shadow .3s}
+.balance .label{font-size:11px;color:var(--muted);letter-spacing:.18em}
+.balance .amount{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;min-width:76px;text-align:right;transition:color .3s}
+.balance.up{border-color:rgba(61,220,151,.5);box-shadow:0 0 0 6px rgba(61,220,151,.06)}
+.balance.up .amount{color:var(--win)}
+.icon-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:transparent;display:grid;place-items:center;color:var(--muted);transition:color .2s,border-color .2s}
+.icon-btn:hover{color:var(--text);border-color:var(--line-2)}
+.icon-btn svg{width:18px;height:18px}
+
+/* ---------- 牌桌 ---------- */
+.table{
+  position:relative;display:grid;grid-template-columns:230px 1fr 230px;padding:22px 32px;
+  background:var(--bg);
+  min-height:0;
+}
+.side{display:flex;flex-direction:column;align-items:center}
+.side.left{justify-content:flex-end;padding-bottom:6px}
+.side.right{justify-content:flex-start;padding-top:6px}
+.center{display:flex;flex-direction:column;justify-content:space-between;align-items:center;min-height:0}
+.zone{display:flex;flex-direction:column;align-items:center;gap:12px}
+.zone-label{display:flex;align-items:center;gap:10px;height:28px;font-size:11px;letter-spacing:.22em;color:var(--muted)}
+.score{
+  min-width:44px;height:28px;padding:0 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);
+  color:var(--text);font-size:14px;font-weight:600;letter-spacing:0;display:inline-grid;place-items:center;font-variant-numeric:tabular-nums;
+  opacity:0;transform:scale(.8);transition:opacity .25s,transform .25s var(--ease),background .25s,color .25s,border-color .25s;
+}
+.score.show{opacity:1;transform:none}
+.score.bust{background:rgba(255,92,108,.12);color:var(--lose);border-color:rgba(255,92,108,.45)}
+.score.bj{background:rgba(242,193,78,.12);color:var(--gold);border-color:rgba(242,193,78,.45)}
+.hand{display:flex;justify-content:center;height:var(--card-h);min-width:var(--card-w)}
+.hand .card + .card{margin-left:calc(var(--card-w) * -0.42)}
+
+.message{height:64px;display:grid;place-items:center;text-align:center}
+.message .main{font-size:26px;font-weight:700;letter-spacing:.02em}
+.message .sub{font-size:13px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
+.message.muted .main{font-size:17px;font-weight:500;color:var(--muted)}
+.message.win .main{color:var(--win)}
+.message.lose .main{color:var(--lose)}
+.message.bj .main{color:var(--gold)}
+.message.pop{animation:pop .45s var(--ease)}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+
+/* ---------- 卡牌 ---------- */
+.card{width:var(--card-w);height:var(--card-h);perspective:900px;flex:none;position:relative}
+.card-inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .42s var(--ease)}
+.card.facedown .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:calc(var(--card-w) * 0.2);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.front{
+  background:#fafafa;color:#151518;display:flex;align-items:center;justify-content:center;
+  box-shadow:-10px 0 18px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.5);
+}
+.card.red .front{color:#d9303f}
+.corner{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1;font-weight:700}
+.corner.tl{top:13px;left:14px}
+.corner.br{bottom:13px;right:14px;transform:rotate(180deg)}
+.corner .r{font-size:calc(var(--card-h) * 0.13);letter-spacing:-.03em}
+.corner .s{font-size:calc(var(--card-h) * 0.1);margin-top:3px}
+.pip{font-size:calc(var(--card-h) * 0.34);line-height:1}
+.court{display:flex;flex-direction:column;align-items:center;line-height:1}
+.court .cr{font-size:calc(var(--card-h) * 0.3);font-weight:800;letter-spacing:-.04em}
+.court .cs{font-size:calc(var(--card-h) * 0.13);margin-top:4px}
+.back,.deck-card{
+  border-radius:calc(var(--card-w) * 0.2);background:#f7f7f7;
+  box-shadow:-10px 0 18px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.5);
+}
+.back{transform:rotateY(180deg)}
+.back::before,.deck-card::before{
+  content:"";position:absolute;inset:calc(var(--card-w) * 0.1);border-radius:calc(var(--card-w) * 0.1);
+  background:repeating-linear-gradient(135deg,#111 0 3px,transparent 3px 11px);
+}
+/* 空的牌位：外框＋暗色斜條紋 */
+.hand:empty::before,.hand:empty::after{
+  content:"";flex:none;width:var(--card-w);height:var(--card-h);
+  border:1.5px solid var(--line);border-radius:calc(var(--card-w) * 0.2);
+  background:repeating-linear-gradient(135deg,#1c1c20 0 3px,transparent 3px 11px),#000;
+  animation:fadeIn .35s ease;
+}
+.hand:empty::after{margin-left:calc(var(--card-w) * -0.42)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ---------- 牌靴 ---------- */
+.shoe{position:relative;width:var(--card-w);height:var(--card-h)}
+.deck-card{position:absolute;inset:0}
+.deck-card:nth-child(1){transform:translate(4px,4px)}
+.deck-card:nth-child(2){transform:translate(2px,2px)}
+.shoe.shuffling .deck-card:nth-child(1){animation:shufA .45s ease 2}
+.shoe.shuffling .deck-card:nth-child(3){animation:shufB .45s ease 2}
+@keyframes shufA{50%{transform:translate(-30px,-4px) rotate(-8deg)}}
+@keyframes shufB{50%{transform:translate(30px,-4px) rotate(8deg)}}
+.shoe-meta{margin-top:16px;font-size:12px;color:var(--muted);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.rules{margin-top:22px;padding:12px 18px;border:1.5px solid var(--line);border-radius:22px;font-size:12px;color:var(--muted);line-height:2;text-align:center}
+
+/* ---------- 籌碼與下注區 ---------- */
+.chip{
+  --c:#c9cad3;width:var(--chip);height:var(--chip);border-radius:50%;position:relative;display:grid;place-items:center;
+  background:radial-gradient(circle closest-side,#18181d 0 64%,var(--c) 65% 100%);
+  box-shadow:0 6px 14px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.35);
+  transition:transform .2s var(--ease);
+}
+.chip::before{content:"";position:absolute;inset:2px;border-radius:50%;border:5px dashed rgba(255,255,255,.8)}
+.chip::after{content:"";position:absolute;inset:14px;border-radius:50%;border:1.5px solid var(--c);opacity:.7}
+.chip span{position:relative;z-index:1;font-weight:800;font-size:14px;color:var(--text)}
+.bet-spot{width:168px;height:168px;border-radius:40px;border:1.5px solid var(--line);display:grid;place-items:center;position:relative;transition:border-color .3s,box-shadow .3s}
+.bet-spot.active{border-color:#5a5a63}
+.bet-hint{font-size:11px;letter-spacing:.24em;color:var(--muted);transition:opacity .2s}
+.bet-stack{position:absolute;left:50%;top:50%;width:var(--chip);height:var(--chip);margin:calc(var(--chip) / -2) 0 0 calc(var(--chip) / -2)}
+.bet-stack .chip{position:absolute;left:0;top:0}
+.bet-meta{margin-top:18px;text-align:center}
+.bet-meta .l{font-size:11px;letter-spacing:.22em;color:var(--muted)}
+.bet-meta .v{font-size:26px;font-weight:500;margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* ---------- 操作列 ---------- */
+.controls{display:flex;align-items:center;justify-content:center;padding:0 32px}
+.panel{display:none;align-items:center;gap:14px}
+.panel.show{display:flex;animation:fadeUp .3s var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.chip-rack{display:flex;gap:14px;margin-right:6px}
+.chip-btn{border-radius:50%;transition:opacity .2s}
+.chip-btn:hover:not(:disabled) .chip{transform:translateY(-6px)}
+.chip-btn:active:not(:disabled) .chip{transform:translateY(-2px) scale(.96)}
+.chip-btn:disabled{opacity:.25}
+.divider{width:1px;height:40px;background:var(--line);margin:0 8px}
+.btn{
+  height:52px;min-width:124px;padding:0 30px;border-radius:999px;font-weight:600;font-size:16px;letter-spacing:.06em;
+  border:1.5px solid var(--line-2);background:transparent;
+  transition:transform .15s var(--ease),background .2s,border-color .2s,opacity .2s;
+}
+.btn small{font-size:12px;font-weight:600;color:var(--muted);margin-left:6px;letter-spacing:0}
+.btn:hover:not(:disabled){transform:translateY(-2px);border-color:#5a5a63;background:var(--surface)}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:disabled{opacity:.3}
+.btn.primary{background:var(--accent);color:#141416;border-color:transparent}
+.btn.primary:hover:not(:disabled){background:#fff}
+.btn.primary small{color:rgba(20,20,22,.6)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--lose);border-color:rgba(255,92,108,.45)}
+
+/* ---------- 快捷鍵、策略提示 ---------- */
+kbd{
+  display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;margin-left:10px;
+  border:1px solid currentColor;border-radius:7px;opacity:.45;vertical-align:2px;
+  font:600 10px/1 "Inter",system-ui,sans-serif;letter-spacing:.04em;
+}
+.btn small + kbd{margin-left:8px}
+.hint{
+  height:28px;padding:0 12px;border-radius:999px;border:1.5px dashed #6a6a74;color:var(--text);
+  font-size:12px;letter-spacing:.06em;display:inline-flex;align-items:center;
+  opacity:0;transform:translateX(-6px);transition:opacity .25s,transform .25s var(--ease);
+}
+.hint.show{opacity:1;transform:none}
+.btn.suggest{box-shadow:0 0 0 4px rgba(255,255,255,.14)}
+#panelPlay .btn{position:relative}
+.btn[data-odds]::before{
+  content:attr(data-odds);position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);
+  font-size:12px;font-weight:500;letter-spacing:.04em;color:var(--muted);white-space:nowrap;pointer-events:none;
+  animation:fadeIn .3s ease;
+}
+.btn.suggest[data-odds]::before{color:var(--text);font-weight:600}
+.btn.suggest:not(.primary){border-color:#9a9aa4}
+.icon-btn.on{color:var(--text);border-color:#5a5a63;background:var(--surface-2)}
+.rules + .rules{margin-top:12px}
+.keys-title{color:var(--text);font-size:11px;letter-spacing:.2em;margin-bottom:2px}
+
+/* ---------- 飛行動畫元素 ---------- */
+.flyer{position:fixed;z-index:40;pointer-events:none}
+.flyer .chip{width:100%;height:100%}
+
+/* ---------- 對話框 ---------- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(6px);display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50}
+.overlay.show{opacity:1;pointer-events:auto}
+.modal{width:440px;background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:28px;transform:translateY(14px) scale(.98);transition:transform .3s var(--ease)}
+.overlay.show .modal{transform:none}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between}
+.modal h2{font-size:20px;font-weight:700}
+.modal p{color:var(--muted);font-size:14px;margin-top:6px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}
+.stat{background:transparent;border:1.5px solid var(--line);border-radius:20px;padding:14px 16px}
+.stat.wide{grid-column:1 / -1;display:flex;align-items:baseline;justify-content:space-between}
+.stat .v{font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}
+.stat .l{font-size:12px;color:var(--muted);margin-top:4px}
+.stat.wide .l{margin-top:0;order:-1}
+.stat.g .v{color:var(--win)}
+.stat.r .v{color:var(--lose)}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px}
+.modal-actions .btn{height:44px;min-width:0;font-size:14px;padding:0 18px}
+.broke{text-align:center}
+.broke .big{font-size:44px;margin-bottom:8px}
+.broke .btn{margin-top:22px;width:100%}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">NOIR <span>21</span></div>
+    <div class="top-right">
+      <div class="balance" id="balancePill">
+        <span class="label">籌碼</span>
+        <span class="amount" id="balance">0</span>
+      </div>
+      <button class="icon-btn" id="btnStats" aria-label="戰績統計" title="戰績統計">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 17V11"/><path d="M12 17V5"/><path d="M18 17v-8"/></svg>
+      </button>
+      <button class="icon-btn" id="btnHints" aria-label="策略提示開關" title="策略提示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg></button>
+      <button class="icon-btn" id="btnSound" aria-label="音效開關" title="音效開關"></button>
+    </div>
+  </header>
+
+  <main class="table">
+    <section class="side left">
+      <div class="bet-spot" id="betSpot">
+        <span class="bet-hint" id="betHint">下注區</span>
+        <div class="bet-stack" id="betStack"></div>
+      </div>
+      <div class="bet-meta">
+        <div class="l">本局下注</div>
+        <div class="v" id="betAmount">0</div>
+      </div>
+    </section>
+
+    <section class="center">
+      <div class="zone">
+        <div class="zone-label">莊家 <span class="score" id="dealerScore"></span></div>
+        <div class="hand" id="dealerHand"></div>
+      </div>
+      <div class="message" id="message">
+        <div><div class="main" id="msgMain"></div><div class="sub" id="msgSub"></div></div>
+      </div>
+      <div class="zone">
+        <div class="hand" id="playerHand"></div>
+        <div class="zone-label">你 <span class="score" id="playerScore"></span><span class="hint" id="hint"></span></div>
+      </div>
+    </section>
+
+    <section class="side right">
+      <div class="shoe" id="shoe">
+        <div class="deck-card"></div><div class="deck-card"></div><div class="deck-card"></div>
+      </div>
+      <div class="shoe-meta" id="shoeCount"></div>
+      <div class="rules">Blackjack 賠 3:2<br>莊家軟 17 停牌<br>6 副牌・最低下注 10</div>
+      <div class="rules keys"><div class="keys-title">鍵盤快捷鍵</div>1–4 下注・C 清除<br>Space 發牌／下一局<br>H 要牌・S 停牌・D 加倍<br>R 同注再來</div>
+    </section>
+  </main>
+
+  <footer class="controls">
+    <div class="panel" id="panelBet">
+      <div class="chip-rack" id="chipRack"></div>
+      <div class="divider"></div>
+      <button class="btn ghost" id="btnClear">清除 <kbd>C</kbd></button>
+      <button class="btn primary" id="btnDeal">發牌 <kbd>Space</kbd></button>
+    </div>
+    <div class="panel" id="panelPlay">
+      <button class="btn" id="btnHit">要牌 <kbd>H</kbd></button>
+      <button class="btn primary" id="btnStand">停牌 <kbd>S</kbd></button>
+      <button class="btn" id="btnDouble">加倍</button>
+    </div>
+    <div class="panel" id="panelNext">
+      <button class="btn" id="btnNext">下一局 <kbd>Space</kbd></button>
+      <button class="btn primary" id="btnRebet">同注再來</button>
+    </div>
+  </footer>
+</div>
+
+<div class="overlay" id="statsOverlay">
+  <div class="modal" role="dialog" aria-labelledby="statsTitle">
+    <div class="modal-head">
+      <div><h2 id="statsTitle">戰績統計</h2><p>資料儲存在這台電腦的瀏覽器中。</p></div>
+      <button class="icon-btn" id="btnCloseStats" aria-label="關閉">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="stats" id="statsGrid"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnResetStats">重置統計</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="brokeOverlay">
+  <div class="modal broke" role="dialog" aria-labelledby="brokeTitle">
+    <div class="big">🃏</div>
+    <h2 id="brokeTitle">籌碼用完了</h2>
+    <p>別灰心，重新拿 1,000 籌碼再來一次。</p>
+    <button class="btn primary" id="btnRestart">重新開始</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ================= 常數 =================
+  const SUITS = ['♠','♥','♦','♣'];
+  const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const DECKS = 6, RESHUFFLE_AT = 52, START_BANK = 1000, MIN_BET = 10;
+  const MAX_STACK = 10, STACK_GAP = 4;
+  const CHIPS = [10, 50, 100, 500];
+  const CHIP_COLOR = {10:'#c9cad3', 50:'#ff5c6c', 100:'#4c8dff', 500:'#f2c14e'};
+  const STORE_KEY = 'noir21.v1';
+
+  const $ = s => document.querySelector(s);
+  const els = {
+    balance:$('#balance'), balancePill:$('#balancePill'),
+    dealerHand:$('#dealerHand'), playerHand:$('#playerHand'),
+    dealerScore:$('#dealerScore'), playerScore:$('#playerScore'),
+    msg:$('#message'), msgMain:$('#msgMain'), msgSub:$('#msgSub'),
+    shoe:$('#shoe'), shoeCount:$('#shoeCount'),
+    betSpot:$('#betSpot'), betStack:$('#betStack'), betHint:$('#betHint'), betAmount:$('#betAmount'),
+    panels:{ bet:$('#panelBet'), play:$('#panelPlay'), next:$('#panelNext') },
+    chipRack:$('#chipRack'),
+    btnClear:$('#btnClear'), btnDeal:$('#btnDeal'),
+    btnHit:$('#btnHit'), btnStand:$('#btnStand'), btnDouble:$('#btnDouble'), btnNext:$('#btnNext'),
+    btnStats:$('#btnStats'), btnSound:$('#btnSound'),
+    statsOverlay:$('#statsOverlay'), statsGrid:$('#statsGrid'), btnResetStats:$('#btnResetStats'), btnCloseStats:$('#btnCloseStats'),
+    brokeOverlay:$('#brokeOverlay'), btnRestart:$('#btnRestart'),
+    btnHints:$('#btnHints'), hint:$('#hint'), btnRebet:$('#btnRebet'),
+  };
+
+  // ================= 狀態 =================
+  const freshStats = bank => ({hands:0, wins:0, losses:0, pushes:0, blackjacks:0, peak:bank, decisions:0, agree:0});
+  const state = {
+    phase:'betting',          // betting | dealing | player | dealer | resolving | settled
+    shoe:[], player:[], dealer:[],
+    bet:0, betChips:[], landed:0, betGen:0,
+    bankroll:START_BANK, holeHidden:false, holeEl:null, busy:false,
+    stats:freshStats(START_BANK), sound:true, hints:true, lastChips:[], final:false,
+  };
+
+  // ================= 儲存 =================
+  function load(){
+    try{
+      const d = JSON.parse(localStorage.getItem(STORE_KEY));
+      if(!d) return;
+      if(Number.isFinite(d.bankroll)) state.bankroll = d.bankroll;
+      if(d.stats) Object.assign(state.stats, d.stats);
+      if(typeof d.sound === 'boolean') state.sound = d.sound;
+      if(typeof d.hints === 'boolean') state.hints = d.hints;
+    }catch(e){}
+    state.stats.peak = Math.max(state.stats.peak || 0, state.bankroll);
+  }
+  function save(){
+    // 下注階段的籌碼還沒進入牌局，存檔時算回餘額
+    const bank = state.bankroll + (state.phase === 'betting' ? state.bet : 0);
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify({bankroll:bank, stats:state.stats, sound:state.sound, hints:state.hints})); }catch(e){}
+  }
+
+  // ================= 牌與點數 =================
+  function buildShoe(){
+    const s = [];
+    for(let d = 0; d < DECKS; d++) for(const suit of SUITS) for(const rank of RANKS) s.push({rank, suit});
+    for(let i = s.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [s[i], s[j]] = [s[j], s[i]]; }
+    return s;
+  }
+  const cardValue = c => c.rank === 'A' ? 1 : (['J','Q','K'].includes(c.rank) ? 10 : +c.rank);
+  function handInfo(cards){
+    let low = 0, aces = 0;
+    for(const c of cards){ low += cardValue(c); if(c.rank === 'A') aces++; }
+    const soft = aces > 0 && low + 10 <= 21;
+    const total = soft ? low + 10 : low;
+    return {low, total, soft, bust: total > 21, bj: cards.length === 2 && total === 21};
+  }
+
+  // ================= 基本策略（6 副牌、莊家軟 17 停牌、不分牌） =================
+  const ACTION_LABEL = {hit:'要牌', stand:'停牌', double:'加倍'};
+  function strategyCore(t, soft, u, canDouble){
+    let a;
+    if(soft && t >= 13){                   // 軟牌（A 算 11）
+      if(t >= 19) a = 'S';
+      else if(t === 18) a = (u >= 3 && u <= 6) ? 'Ds' : (u <= 8 ? 'S' : 'H');
+      else if(t === 17) a = (u >= 3 && u <= 6) ? 'D' : 'H';
+      else if(t >= 15) a = (u >= 4 && u <= 6) ? 'D' : 'H';
+      else a = (u >= 5 && u <= 6) ? 'D' : 'H';
+    } else {                               // 硬牌（含不能分牌的對子、A+A）
+      if(soft) a = 'H';
+      else if(t >= 17) a = 'S';
+      else if(t >= 13) a = u <= 6 ? 'S' : 'H';
+      else if(t === 12) a = (u >= 4 && u <= 6) ? 'S' : 'H';
+      else if(t === 11) a = u <= 10 ? 'D' : 'H';
+      else if(t === 10) a = u <= 9 ? 'D' : 'H';
+      else if(t === 9) a = (u >= 3 && u <= 6) ? 'D' : 'H';
+      else a = 'H';
+    }
+    if(a === 'Ds') return canDouble ? 'double' : 'stand';   // 能加倍就加倍，否則停牌
+    if(a === 'D') return canDouble ? 'double' : 'hit';      // 能加倍就加倍，否則要牌
+    return a === 'S' ? 'stand' : 'hit';
+  }
+  function strategy(player, upCard){
+    const h = handInfo(player);
+    const u = upCard.rank === 'A' ? 11 : cardValue(upCard);   // 莊家明牌 2–11
+    return strategyCore(h.total, h.soft, u, player.length === 2 && state.bankroll >= state.bet);
+  }
+
+  // ================= 勝率計算 =================
+  // 用「還沒出現的牌」（牌靴剩餘＋莊家暗牌）的比例當作抽牌機率，遞迴算出精確機率。
+  // 莊家已確認沒有 Blackjack，所以暗牌的機率要排除會湊成 Blackjack 的牌。
+  function unseenProbs(){
+    const cnt = new Array(11).fill(0);
+    state.shoe.forEach(c => cnt[cardValue(c)]++);
+    if(state.holeHidden && state.dealer[1]) cnt[cardValue(state.dealer[1])]++;
+    const n = cnt.reduce((x, y) => x + y, 0);
+    return cnt.map(c => c / n);
+  }
+  function analyzeOdds(){
+    const p = unseenProbs();
+    const up = cardValue(state.dealer[0]), uStrat = up === 1 ? 11 : up;
+    const addInto = (acc, sub, w) => { for(const k in sub) acc[k] = (acc[k] || 0) + w * sub[k]; };
+
+    // 莊家最終點數分布（軟 17 停牌）
+    const dMemo = new Map();
+    function dealerFrom(low, ace){
+      const best = ace && low + 10 <= 21 ? low + 10 : low;
+      if(best > 21) return {bust:1};
+      if(best >= 17) return {[best]:1};
+      const key = low * 2 + (ace ? 1 : 0);
+      if(dMemo.has(key)) return dMemo.get(key);
+      const out = {};
+      for(let v = 1; v <= 10; v++) if(p[v]) addInto(out, dealerFrom(low + v, ace || v === 1), p[v]);
+      dMemo.set(key, out);
+      return out;
+    }
+    const dealer = {}; let norm = 0;
+    for(let v = 1; v <= 10; v++){
+      if(!p[v] || (up === 1 && v === 10) || (up === 10 && v === 1)) continue;
+      norm += p[v];
+      addInto(dealer, dealerFrom(up + v, up === 1 || v === 1), p[v]);
+    }
+    for(const k in dealer) dealer[k] /= norm;
+
+    const standRes = t => {
+      if(t > 21) return {win:0, push:0, lose:1};
+      let win = dealer.bust || 0, push = 0;
+      for(let f = 17; f <= 21; f++){ const q = dealer[f] || 0; if(f < t) win += q; else if(f === t) push += q; }
+      return {win, push, lose: 1 - win - push};
+    };
+    const best = (low, ace) => ace && low + 10 <= 21 ? low + 10 : low;
+    const mix = (fn) => {
+      const r = {win:0, push:0, lose:0};
+      for(let v = 1; v <= 10; v++){ if(!p[v]) continue; const s2 = fn(v); r.win += p[v] * s2.win; r.push += p[v] * s2.push; r.lose += p[v] * s2.lose; }
+      return r;
+    };
+    // 要牌：拿一張後，之後照基本策略繼續要牌或停牌
+    const hMemo = new Map();
+    function afterDraw(low, ace){
+      const t = best(low, ace), soft = ace && low + 10 <= 21;
+      if(t >= 21) return standRes(t);
+      const key = low * 2 + (ace ? 1 : 0);
+      if(hMemo.has(key)) return hMemo.get(key);
+      const r = strategyCore(t, soft, uStrat, false) === 'hit' ? mix(v => afterDraw(low + v, ace || v === 1)) : standRes(t);
+      hMemo.set(key, r);
+      return r;
+    }
+    const low = state.player.reduce((x, c) => x + cardValue(c), 0), ace = state.player.some(c => c.rank === 'A');
+    const res = {
+      stand: standRes(best(low, ace)),
+      hit: mix(v => afterDraw(low + v, ace || v === 1)),
+    };
+    // 加倍：只拿一張就停牌，輸贏都是兩倍
+    if(state.player.length === 2 && state.bankroll >= state.bet) res.double = mix(v => standRes(best(low + v, ace || v === 1)));
+    for(const k in res) res[k].ev = (res[k].win - res[k].lose) * (k === 'double' ? 2 : 1);
+    return res;
+  }
+  const pct = x => Math.round(x * 100) + '%';
+  const signed = x => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(2);
+  function recordDecision(action){
+    const rec = strategy(state.player, state.dealer[0]);
+    state.stats.decisions++;
+    if(rec === action) state.stats.agree++;
+  }
+  function renderHint(){
+    const show = state.hints && state.phase === 'player' && !state.busy && state.player.length >= 2;
+    const rec = show ? strategy(state.player, state.dealer[0]) : null;
+    const odds = rec ? analyzeOdds() : null;
+    els.hint.classList.toggle('show', !!rec);
+    if(rec) els.hint.textContent = `建議 ${ACTION_LABEL[rec]} · 期望值 ${signed(odds[rec].ev)} 注`;
+    [['hit', els.btnHit], ['stand', els.btnStand], ['double', els.btnDouble]].forEach(([a, b]) => {
+      b.classList.toggle('suggest', rec === a);
+      const o = odds && odds[a];
+      if(o && !b.disabled){
+        b.dataset.odds = `勝率 ${pct(o.win)}`;
+        b.title = `贏 ${pct(o.win)}・平 ${pct(o.push)}・輸 ${pct(o.lose)}・期望值 ${signed(o.ev)} 注`;
+      } else { delete b.dataset.odds; b.removeAttribute('title'); }
+    });
+  }
+
+  // ================= 音效（Web Audio 即時合成） =================
+  let actx = null;
+  function ac(){
+    if(!actx){ const C = window.AudioContext || window.webkitAudioContext; if(!C) return null; actx = new C(); }
+    if(actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function tone(freq, dur, {type='sine', gain=.12, when=0, slide=null} = {}){
+    const a = ac(); if(!a) return;
+    const t = a.currentTime + when;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if(slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + .01);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g).connect(a.destination);
+    o.start(t); o.stop(t + dur + .02);
+  }
+  function noise(dur, {gain=.3, freq=2800, when=0} = {}){
+    const a = ac(); if(!a) return;
+    const t = a.currentTime + when;
+    const len = Math.floor(a.sampleRate * dur);
+    const buf = a.createBuffer(1, len, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+    const src = a.createBufferSource(); src.buffer = buf;
+    const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = .8;
+    const g = a.createGain(); g.gain.value = gain;
+    src.connect(f).connect(g).connect(a.destination);
+    src.start(t);
+  }
+  const SFX = {
+    deal(){ noise(.09, {gain:.35, freq:3200}); },
+    flip(){ noise(.07, {gain:.22, freq:1800}); },
+    chip(){ tone(1900, .06, {type:'triangle', gain:.1}); tone(2700, .05, {type:'triangle', gain:.07, when:.03}); },
+    shuffle(){ for(let i = 0; i < 6; i++) noise(.08, {gain:.2, freq:2400 + i * 120, when:i * .07}); },
+    win(){ [523.25, 659.25, 783.99].forEach((f, i) => tone(f, .22, {type:'triangle', gain:.11, when:i * .08})); },
+    bj(){ [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, .26, {type:'triangle', gain:.11, when:i * .07})); },
+    lose(){ tone(392, .2, {gain:.12}); tone(311, .38, {gain:.12, when:.15, slide:220}); },
+    push(){ tone(587, .12, {gain:.09}); tone(587, .12, {gain:.09, when:.16}); },
+  };
+  function play(name){ if(!state.sound || !SFX[name]) return; try{ SFX[name](); }catch(e){} }
+
+  const SOUND_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+  const SOUND_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>';
+  function renderHintsBtn(){
+    els.btnHints.classList.toggle('on', state.hints);
+    els.btnHints.title = state.hints ? '策略提示：開' : '策略提示：關';
+  }
+  function renderSoundBtn(){
+    els.btnSound.innerHTML = state.sound ? SOUND_ON : SOUND_OFF;
+    els.btnSound.title = state.sound ? '音效：開' : '音效：關';
+  }
+
+  // ================= 動畫工具 =================
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const fmt = n => n.toLocaleString('en-US');
+  const chipHTML = v => `<div class="chip" style="--c:${CHIP_COLOR[v]}"><span>${v}</span></div>`;
+  function centered(rect, size){
+    return {left: rect.left + rect.width / 2 - size / 2, top: rect.top + rect.height / 2 - size / 2, width:size, height:size};
+  }
+  // 從 fromRect 飛到 toRect（中心對中心）
+  function flyClone(html, fromRect, toRect, {dur=420, fade=false, scale=1} = {}){
+    return new Promise(res => {
+      const f = document.createElement('div');
+      f.className = 'flyer'; f.innerHTML = html;
+      Object.assign(f.style, {left:fromRect.left + 'px', top:fromRect.top + 'px', width:fromRect.width + 'px', height:fromRect.height + 'px'});
+      document.body.appendChild(f);
+      const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
+      const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
+      f.getBoundingClientRect();
+      f.style.transition = `transform ${dur}ms cubic-bezier(.2,.8,.2,1), opacity ${dur}ms ease`;
+      f.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+      if(fade) f.style.opacity = '0';
+      setTimeout(() => { f.remove(); res(); }, dur);
+    });
+  }
+
+  let shownBalance = 0, balRaf = 0;
+  function updateBalance(flash){
+    const from = shownBalance, to = state.bankroll, start = performance.now(), dur = 550;
+    cancelAnimationFrame(balRaf);
+    const step = now => {
+      const p = Math.min(1, (now - start) / dur), e = 1 - Math.pow(1 - p, 3);
+      shownBalance = Math.round(from + (to - from) * e);
+      els.balance.textContent = fmt(shownBalance);
+      if(p < 1) balRaf = requestAnimationFrame(step);
+    };
+    balRaf = requestAnimationFrame(step);
+    if(flash === 'up'){
+      els.balancePill.classList.add('up');
+      setTimeout(() => els.balancePill.classList.remove('up'), 1100);
+    }
+    updateButtons();
+  }
+
+  // ================= 畫面更新 =================
+  function setMessage(main, sub = '', kind = ''){
+    els.msg.className = 'message ' + kind;
+    els.msgMain.textContent = main;
+    els.msgSub.textContent = sub;
+    void els.msg.offsetWidth;
+    els.msg.classList.add('pop');
+  }
+  function setScore(el, cards, partial){
+    if(!cards.length){ el.classList.remove('show', 'bust', 'bj'); return; }
+    const h = handInfo(cards), isBJ = h.bj && !partial;
+    el.classList.add('show');
+    el.classList.toggle('bust', h.bust);
+    el.classList.toggle('bj', isBJ);
+    // 牌局結束後只顯示最終點數，不再顯示軟牌的兩種算法
+    el.textContent = isBJ ? 'Blackjack' : (h.soft && h.total < 21 && !state.final ? `${h.low} / ${h.total}` : `${h.total}`);
+  }
+  function renderScores(){
+    setScore(els.playerScore, state.player, false);
+    const visible = state.holeHidden ? state.dealer.filter((_, i) => i !== 1) : state.dealer;
+    setScore(els.dealerScore, visible, state.holeHidden);
+  }
+  function renderShoe(){ els.shoeCount.textContent = `牌靴剩餘 ${state.shoe.length} 張`; }
+  function renderBetStack(){
+    const chips = state.betChips.slice(0, state.landed).slice(-MAX_STACK);
+    els.betStack.innerHTML = chips.map((v, i) =>
+      `<div class="chip" style="--c:${CHIP_COLOR[v]};transform:translateY(${-i * STACK_GAP}px) rotate(${(i * 37) % 24 - 12}deg)"><span>${v}</span></div>`
+    ).join('');
+    els.betHint.style.opacity = state.landed ? 0 : 1;
+  }
+  function updateBetUI(){
+    els.betAmount.textContent = fmt(state.bet);
+    els.betSpot.classList.toggle('active', state.bet > 0);
+  }
+  function nextChipRect(){
+    const r = els.betStack.getBoundingClientRect();
+    const i = Math.min(state.landed, MAX_STACK - 1);
+    return {left:r.left, top:r.top - i * STACK_GAP, width:r.width, height:r.height};
+  }
+  function setPhase(p){
+    state.phase = p;
+    const panel = p === 'betting' ? 'bet' : p === 'settled' ? 'next' : 'play';
+    for(const [k, el] of Object.entries(els.panels)) el.classList.toggle('show', k === panel);
+    updateButtons();
+  }
+  function updateButtons(){
+    const betting = state.phase === 'betting', playing = state.phase === 'player' && !state.busy;
+    els.chipRack.querySelectorAll('.chip-btn').forEach(b => { b.disabled = !betting || +b.dataset.v > state.bankroll; });
+    els.btnClear.disabled = !betting || state.bet === 0;
+    els.btnDeal.disabled = !betting || state.bet < MIN_BET || state.busy;
+    els.btnHit.disabled = !playing;
+    els.btnStand.disabled = !playing;
+    els.btnDouble.disabled = !playing || state.player.length !== 2 || state.bankroll < state.bet;
+    els.btnDouble.innerHTML = (state.bet ? `加倍 <small>+${fmt(state.bet)}</small>` : '加倍') + '<kbd>D</kbd>';
+    els.btnNext.disabled = state.busy;
+    const lastSum = state.lastChips.reduce((a, b) => a + b, 0);
+    els.btnRebet.disabled = state.busy || !lastSum || state.bankroll < lastSum;
+    els.btnRebet.innerHTML = `同注再來 <small>${fmt(lastSum)}</small><kbd>R</kbd>`;
+    renderHint();
+  }
+
+  // ================= 發牌動畫 =================
+  function createCardEl(card){
+    const el = document.createElement('div');
+    const red = card.suit === '♥' || card.suit === '♦';
+    const court = ['J','Q','K'].includes(card.rank);
+    const su = card.suit + '\uFE0E';
+    el.className = 'card facedown' + (red ? ' red' : '');
+    const corner = pos => `<div class="corner ${pos}"><span class="r">${card.rank}</span><span class="s">${su}</span></div>`;
+    const center = court
+      ? `<div class="court"><span class="cr">${card.rank}</span><span class="cs">${su}</span></div>`
+      : `<div class="pip">${su}</div>`;
+    el.innerHTML = `<div class="card-inner"><div class="face front">${corner('tl')}${center}${corner('br')}</div><div class="face back"></div></div>`;
+    return el;
+  }
+  async function dealTo(who, faceUp = true){
+    const card = state.shoe.pop();
+    state[who].push(card);
+    renderShoe();
+    const handEl = who === 'player' ? els.playerHand : els.dealerHand;
+    const el = createCardEl(card);
+
+    // 讓既有的牌平滑讓位（FLIP）
+    const existing = [...handEl.children];
+    const before = existing.map(c => c.getBoundingClientRect().left);
+    handEl.appendChild(el);
+    existing.forEach((c, i) => {
+      const dx = before[i] - c.getBoundingClientRect().left;
+      c.style.transition = 'none';
+      c.style.transform = dx ? `translateX(${dx}px)` : '';
+    });
+
+    // 新牌從牌靴飛入
+    const target = el.getBoundingClientRect(), src = els.shoe.getBoundingClientRect();
+    el.style.transition = 'none';
+    el.style.transform = `translate(${src.left - target.left}px, ${src.top - target.top}px) rotate(-8deg)`;
+    el.getBoundingClientRect();
+    existing.forEach(c => { c.style.transition = 'transform .42s cubic-bezier(.2,.8,.2,1)'; c.style.transform = ''; });
+    el.style.transition = 'transform .5s cubic-bezier(.2,.8,.2,1)';
+    el.style.transform = '';
+    play('deal');
+
+    await sleep(360);
+    if(faceUp) el.classList.remove('facedown');
+    await sleep(faceUp ? 240 : 120);
+    renderScores();
+    return el;
+  }
+  async function revealHole(){
+    if(!state.holeHidden) return;
+    state.holeHidden = false;
+    if(state.holeEl) state.holeEl.classList.remove('facedown');
+    play('flip');
+    await sleep(220);
+    renderScores();
+    await sleep(320);
+  }
+  async function reshuffle(){
+    setMessage('洗牌中…', '牌靴剩不到 52 張，重新洗 6 副牌', 'muted');
+    els.shoe.classList.add('shuffling');
+    play('shuffle');
+    await sleep(950);
+    els.shoe.classList.remove('shuffling');
+    state.shoe = buildShoe();
+    renderShoe();
+  }
+
+  // ================= 下注 =================
+  async function addChip(v, btn){
+    if(state.phase !== 'betting' || v > state.bankroll) return;
+    ac();
+    state.bankroll -= v; state.bet += v; state.betChips.push(v);
+    updateBalance(); updateBetUI(); save(); play('chip');
+    const gen = state.betGen;
+    await flyClone(chipHTML(v), btn.querySelector('.chip').getBoundingClientRect(), nextChipRect(), {dur:380});
+    if(gen !== state.betGen) return;
+    state.landed++;
+    renderBetStack();
+  }
+  async function clearBet(){
+    if(state.phase !== 'betting' || state.bet === 0) return;
+    const from = els.betStack.getBoundingClientRect();
+    const top = state.betChips[state.betChips.length - 1];
+    state.betGen++;
+    state.bankroll += state.bet; state.bet = 0; state.betChips = []; state.landed = 0;
+    renderBetStack(); updateBetUI(); updateBalance(); save(); play('chip');
+    await flyClone(chipHTML(top), from, els.balancePill.getBoundingClientRect(), {fade:true, scale:.6});
+  }
+
+  // ================= 牌局流程 =================
+  async function deal(){
+    if(state.phase !== 'betting' || state.bet < MIN_BET || state.busy) return;
+    ac();
+    state.busy = true;
+    state.lastChips = [...state.betChips];
+    updateButtons();
+    if(state.shoe.length < RESHUFFLE_AT) await reshuffle();
+    setPhase('dealing');
+    save();
+    setMessage('發牌中…', '', 'muted');
+    state.holeHidden = true;
+    await dealTo('player');
+    await dealTo('dealer');
+    await dealTo('player');
+    state.holeEl = await dealTo('dealer', false);
+
+    const p = handInfo(state.player), d = handInfo(state.dealer);
+    if(p.bj || d.bj){ await revealHole(); return settle(); }
+
+    state.busy = false;
+    setPhase('player');
+    setMessage('要牌、停牌，還是加倍？', `莊家明牌 ${state.dealer[0].rank}${state.dealer[0].suit}\uFE0E`, 'muted');
+  }
+  async function hit(){
+    if(state.phase !== 'player' || state.busy) return;
+    recordDecision('hit');
+    state.busy = true; updateButtons();
+    await dealTo('player');
+    const p = handInfo(state.player);
+    if(p.bust){ setPhase('dealer'); await revealHole(); return settle(); }
+    if(p.total === 21){ return dealerTurn(); }
+    state.busy = false;
+    setMessage('要牌還是停牌？', `目前 ${p.total} 點`, 'muted');
+    updateButtons();
+  }
+  async function stand(){
+    if(state.phase !== 'player' || state.busy) return;
+    recordDecision('stand');
+    return dealerTurn();
+  }
+  async function doubleDown(){
+    if(state.phase !== 'player' || state.busy || state.player.length !== 2 || state.bankroll < state.bet) return;
+    recordDecision('double');
+    state.busy = true;
+    const add = state.bet, copies = [...state.betChips];
+    state.bankroll -= add; state.bet += add; state.betChips.push(...copies);
+    updateBalance(); updateBetUI(); save(); play('chip');
+    setMessage('加倍！只再拿一張牌', `下注提高到 ${fmt(state.bet)}`, 'muted');
+    await flyClone(chipHTML(copies[copies.length - 1]), centered(els.balancePill.getBoundingClientRect(), 64), nextChipRect(), {dur:420});
+    state.landed = state.betChips.length; renderBetStack();
+    await dealTo('player');
+    if(handInfo(state.player).bust){ setPhase('dealer'); await revealHole(); return settle(); }
+    return dealerTurn();
+  }
+  async function dealerTurn(){
+    state.busy = true;
+    setPhase('dealer');
+    setMessage('莊家回合', '莊家 16 點以下必須補牌', 'muted');
+    await revealHole();
+    while(handInfo(state.dealer).total < 17){
+      await sleep(260);
+      await dealTo('dealer');
+    }
+    await sleep(200);
+    return settle();
+  }
+  async function settle(){
+    state.busy = true;
+    state.final = true; renderScores();
+    setPhase('resolving');
+    const p = handInfo(state.player), d = handInfo(state.dealer), bet = state.bet;
+    let outcome, main, sub = '', payout = 0;
+    if(p.bj && d.bj){ outcome = 'push'; payout = bet; main = '雙方都是 Blackjack'; sub = `平手・退回 ${fmt(bet)}`; }
+    else if(p.bj){ outcome = 'blackjack'; payout = bet + Math.floor(bet * 1.5); main = 'Blackjack！'; sub = `3:2 賠率・+${fmt(payout - bet)}`; }
+    else if(d.bj){ outcome = 'lose'; main = '莊家 Blackjack'; sub = `−${fmt(bet)}`; }
+    else if(p.bust){ outcome = 'lose'; main = '爆牌了'; sub = `${p.total} 點・−${fmt(bet)}`; }
+    else if(d.bust){ outcome = 'win'; payout = bet * 2; main = '莊家爆牌，你贏了！'; sub = `+${fmt(bet)}`; }
+    else if(p.total > d.total){ outcome = 'win'; payout = bet * 2; main = '你贏了！'; sub = `${p.total} 對 ${d.total}・+${fmt(bet)}`; }
+    else if(p.total < d.total){ outcome = 'lose'; main = '莊家贏'; sub = `${p.total} 對 ${d.total}・−${fmt(bet)}`; }
+    else { outcome = 'push'; payout = bet; main = '平手'; sub = `${p.total} 對 ${d.total}・退回 ${fmt(bet)}`; }
+
+    const kind = {blackjack:'bj', win:'win', lose:'lose', push:''}[outcome];
+    setMessage(main, sub, kind);
+    play(outcome === 'blackjack' ? 'bj' : outcome);
+    await sleep(450);
+
+    // 籌碼動畫：贏 → 莊家先賠錢，再一起收回；輸 → 籌碼被莊家收走
+    const topChip = state.betChips[state.betChips.length - 1] || 10;
+    if(payout > bet){
+      await flyClone(chipHTML(topChip), centered(els.dealerHand.getBoundingClientRect(), 64), nextChipRect(), {dur:420});
+      state.betChips.push(...state.betChips); state.landed = state.betChips.length;
+      renderBetStack(); play('chip');
+      await sleep(300);
+    }
+    const from = els.betStack.getBoundingClientRect();
+    state.betGen++;
+    state.betChips = []; state.landed = 0; renderBetStack();
+    if(payout > 0) await flyClone(chipHTML(topChip), from, els.balancePill.getBoundingClientRect(), {fade:true, scale:.6});
+    else await flyClone(chipHTML(topChip), from, centered(els.dealerHand.getBoundingClientRect(), 64), {fade:true, scale:.8});
+
+    state.bankroll += payout; state.bet = 0;
+    updateBalance(payout > bet ? 'up' : ''); updateBetUI();
+
+    const s = state.stats;
+    s.hands++;
+    if(outcome === 'win' || outcome === 'blackjack') s.wins++;
+    if(outcome === 'blackjack') s.blackjacks++;
+    if(outcome === 'lose') s.losses++;
+    if(outcome === 'push') s.pushes++;
+    s.peak = Math.max(s.peak, state.bankroll);
+
+    state.busy = false;
+    setPhase('settled');
+    save();
+    if(state.bankroll < MIN_BET){ await sleep(700); showOverlay(els.brokeOverlay); }
+  }
+  async function nextHand(){
+    if(state.phase !== 'settled' || state.busy) return;
+    state.busy = true; updateButtons();
+    const cards = [...els.dealerHand.children, ...els.playerHand.children];
+    cards.forEach((c, i) => {
+      c.style.transition = `transform .4s cubic-bezier(.2,.8,.2,1) ${i * 30}ms, opacity .35s ease ${i * 30}ms`;
+      c.style.transform = 'translateY(-24px) scale(.92)';
+      c.style.opacity = '0';
+    });
+    await sleep(420 + cards.length * 30);
+    els.dealerHand.innerHTML = ''; els.playerHand.innerHTML = '';
+    state.player = []; state.dealer = []; state.holeEl = null; state.holeHidden = false; state.final = false;
+    renderScores();
+    state.busy = false;
+    setPhase('betting');
+    setMessage('選擇籌碼下注', `最低下注 ${MIN_BET}`, 'muted');
+  }
+
+  const rackBtn = v => els.chipRack.querySelector(`.chip-btn[data-v="${v}"]`);
+  async function rebet(){
+    const chips = [...state.lastChips], sum = chips.reduce((a, b) => a + b, 0);
+    if(state.phase !== 'settled' || state.busy || !sum || state.bankroll < sum) return;
+    await nextHand();
+    await Promise.all(chips.map((v, i) => sleep(Math.min(i, 8) * 60).then(() => addChip(v, rackBtn(v)))));
+    await sleep(150);
+    return deal();
+  }
+
+  // ================= 對話框 =================
+  function showOverlay(o){ o.classList.add('show'); }
+  function hideOverlay(o){ o.classList.remove('show'); }
+  function renderStats(){
+    const s = state.stats;
+    const rate = s.hands ? (Math.round(s.wins / s.hands * 1000) / 10) + '%' : '—';
+    const items = [
+      ['總局數', s.hands, ''], ['勝率', rate, ''], ['Blackjack', s.blackjacks, ''],
+      ['勝', s.wins, 'g'], ['負', s.losses, 'r'], ['平', s.pushes, ''],
+      ['最高籌碼紀錄', fmt(s.peak), 'wide'],
+      [`策略一致率・共 ${s.decisions} 次決策`, s.decisions ? Math.round(s.agree / s.decisions * 100) + '%' : '—', 'wide'],
+    ];
+    els.statsGrid.innerHTML = items.map(([l, v, c]) => `<div class="stat ${c}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  }
+  let resetArmed = null;
+  function disarmReset(){
+    clearTimeout(resetArmed); resetArmed = null;
+    els.btnResetStats.textContent = '重置統計';
+    els.btnResetStats.classList.remove('danger');
+  }
+  els.btnResetStats.addEventListener('click', () => {
+    if(!resetArmed){
+      els.btnResetStats.textContent = '再按一次確認';
+      els.btnResetStats.classList.add('danger');
+      resetArmed = setTimeout(disarmReset, 3000);
+      return;
+    }
+    disarmReset();
+    state.stats = freshStats(state.bankroll);
+    save(); renderStats();
+  });
+  els.btnStats.addEventListener('click', () => { renderStats(); showOverlay(els.statsOverlay); });
+  els.btnCloseStats.addEventListener('click', () => { hideOverlay(els.statsOverlay); disarmReset(); });
+  els.statsOverlay.addEventListener('click', e => { if(e.target === els.statsOverlay){ hideOverlay(els.statsOverlay); disarmReset(); } });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape'){ hideOverlay(els.statsOverlay); disarmReset(); } });
+  els.btnRestart.addEventListener('click', async () => {
+    state.bankroll = START_BANK;
+    state.stats.peak = Math.max(state.stats.peak, START_BANK);
+    hideOverlay(els.brokeOverlay);
+    updateBalance('up'); save();
+    if(state.phase === 'settled') await nextHand();
+  });
+
+  // ================= 綁定事件 =================
+  els.chipRack.innerHTML = CHIPS.map(v => `<button class="chip-btn" data-v="${v}" aria-label="下注 ${v}">${chipHTML(v)}</button>`).join('');
+  els.chipRack.querySelectorAll('.chip-btn').forEach(b => b.addEventListener('click', () => addChip(+b.dataset.v, b)));
+  els.btnClear.addEventListener('click', clearBet);
+  els.btnDeal.addEventListener('click', deal);
+  els.btnHit.addEventListener('click', hit);
+  els.btnStand.addEventListener('click', stand);
+  els.btnDouble.addEventListener('click', doubleDown);
+  els.btnNext.addEventListener('click', nextHand);
+  els.btnRebet.addEventListener('click', rebet);
+  els.btnHints.addEventListener('click', () => { state.hints = !state.hints; renderHintsBtn(); save(); updateButtons(); });
+
+  // 鍵盤快捷鍵
+  function chipKey(v){ const b = rackBtn(v); if(b && !b.disabled) addChip(v, b); }
+  const spaceAction = () => state.phase === 'betting' ? deal() : state.phase === 'settled' ? nextHand() : null;
+  const KEYS = {
+    'h':hit, 's':stand, 'd':doubleDown, 'r':rebet, 'c':clearBet, 'backspace':clearBet,
+    ' ':spaceAction, 'enter':spaceAction,
+    '1':() => chipKey(10), '2':() => chipKey(50), '3':() => chipKey(100), '4':() => chipKey(500),
+  };
+  document.addEventListener('keydown', e => {
+    if(e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+    if(els.statsOverlay.classList.contains('show') || els.brokeOverlay.classList.contains('show')) return;
+    const fn = KEYS[e.key.toLowerCase()];
+    if(!fn) return;
+    e.preventDefault();
+    if(document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur();
+    fn();
+  });
+  els.btnSound.addEventListener('click', () => { state.sound = !state.sound; renderSoundBtn(); save(); if(state.sound) play('chip'); });
+
+  // ================= 初始化 =================
+  load();
+  state.shoe = buildShoe();
+  shownBalance = state.bankroll;
+  els.balance.textContent = fmt(state.bankroll);
+  renderShoe(); renderSoundBtn(); renderHintsBtn(); renderBetStack(); updateBetUI();
+  setPhase('betting');
+  setMessage('選擇籌碼下注', `最低下注 ${MIN_BET}`, 'muted');
+  if(state.bankroll < MIN_BET) showOverlay(els.brokeOverlay);
+})();
+</script>
+</body>
+</html>
